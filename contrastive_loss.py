@@ -168,22 +168,6 @@ class HCR(nn.Module):
         self.eps = 1e-12
         self.weight = weight
 
-    def run_gcr(self, X, k1=5, t=0.2):
-        sim = X.mm(X.t())
-        rank = torch.argsort(-sim, axis=1)
-        S = torch.zeros(sim.shape).cuda()
-        for i in range(0, X.shape[0]):
-            S[i, rank[i, :k1]] = torch.exp(sim[i, rank[i, :k1]]/t)
-
-        D_row = torch.sqrt(1. / torch.sum(S, axis=1))
-        D_col = torch.sqrt(1. / torch.sum(S, axis=0))
-        L = torch.outer(D_row, D_col) * S
-        global_X = L.mm(X)
-
-        X = global_X
-        X /= torch.linalg.norm(X, ord=2, axis=1, keepdims=True)
-
-        return X
 
     def pairwise_dist(self, x):
         x_square = x.pow(2).sum(dim=1)
@@ -197,7 +181,6 @@ class HCR(nn.Module):
         
     def hcr_loss(self, h, g):
 
-        # g = self.run_gcr(g)
         q1, q2 = self.pairwise_prob(self.pairwise_dist(h)), self.pairwise_prob(self.pairwise_dist(g))
         return -1 * (q1 * torch.log(q2 + self.eps)).mean() + -1 * ((1 - q1) * torch.log((1 - q2) + self.eps)).mean()
 
